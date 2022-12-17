@@ -1,0 +1,67 @@
+// Creating Model
+var makeModel = function(f) {return function(){
+	// Your code here
+    var rapidDisaster = mem(function(disaster){return flip(.25)}) // 25% of disasters are rapid
+    var infrastructureBad = mem(function(infrastructure){return flip(.62)}) // 62% infrastructure affected
+    var humanLossBad = mem(function(humanLoss){return flip(.19)}) // 19% human loss severe
+    var donationDecision = mem(function(disaster, infrastructure, humanLoss){
+      var donate = rapidDisaster(disaster) && infrastructureBad(infrastructure) && humanLossBad(humanLoss) 
+                   ? 1.0 : rapidDisaster(disaster) && infrastructureBad(infrastructure)
+                   ? 0.8 : rapidDisaster(disaster) && humanLossBad(humanLoss)
+                   ? 0.9 : rapidDisaster(disaster) 
+                   ? 0.7 : infrastructureBad(infrastructure) && humanLossBad(humanLoss)
+                   ? 0.5 : infrastructureBad(infrastructure)
+                   ? 0.2 : humanLossBad(humanLoss)
+                   ? 0.3 : 0.1
+      flip(donate)
+    }) // We use the flip function and the different conditional probabilities to set up varying scenarios
+    f(rapidDisaster, infrastructureBad, humanLossBad, donationDecision)
+}}
+editor.put("makeModel", makeModel)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// (1) Probability of rapid disaster if donation is made
+var makeModel = editor.get("makeModel")
+var dist1 = Infer({method:'enumerate'}, makeModel(function(rapidDisaster, infrastructureBad, humanLossBad, donationDecision){
+    condition(donationDecision('disaster1', 'infrastructure1', 'humanLoss1') == true)
+    rapidDisaster('disaster1')
+}))
+
+viz(dist1, {xLabel: 'Rapid disaster', yLabel: 'P(Rapid disaster | Donation made)'})
+print("P(Rapid disaster | Donation made) = " + Math.exp(dist1.score(true)))
+
+
+// (2) Probability of infrastructural damage if donation is made
+var makeModel = editor.get("makeModel")
+var dist2 = Infer({method:'enumerate'}, makeModel(function(rapidDisaster, infrastructureBad, humanLossBad, donationDecision){
+    condition(donationDecision('disaster1', 'infrastructure1', 'humanLoss1') == true)
+    infrastructureBad('infrastructure1')
+}))
+
+viz(dist2, {xLabel: 'Infrastructure Damaged', yLabel: '(Infrastructure Damaged | Donation made)'})
+print("P(Infrastructure Damaged | Donation made) = " + Math.exp(dist2.score(true)))
+
+
+// (3) Probability of severe human loss if donation is made
+var makeModel = editor.get("makeModel")
+var dist3 = Infer({method:'enumerate'}, makeModel(function(rapidDisaster, infrastructureBad, humanLossBad, donationDecision){
+    condition(donationDecision('disaster1', 'infrastructure1', 'humanLoss1') == true)
+    humanLossBad('humanLoss1')
+}))
+
+viz(dist3, {xLabel: 'Severe Human Loss', yLabel: 'P(Severe Human Loss | Donation made)'})
+print("P(Severe Human Loss | Donation made) = " + Math.exp(dist3.score(true)))
+
+
+// (4) Full scenario according to survey
+var makeModel = editor.get("makeModel")
+var dist4 = Infer({method:'enumerate'}, makeModel(function(rapidDisaster, infrastructureBad, humanLossBad, donationDecision){
+    condition(rapidDisaster('disaster1') == true)
+    condition(infrastructureBad('infrastructure1') == true)
+    condition(humanLossBad('humanLoss1') == false)
+    donationDecision('donation1')
+}))
+
+viz(dist4, {xLabel: 'Donation made', yLabel: 'P(Donation made | Rapid, Infra. Damaged, Little Human Loss)'})
+print("P(Donation | Rapid, Infra. Damaged, No Human Loss) = " + Math.exp(dist4.score(true)))
